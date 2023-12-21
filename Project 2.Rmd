@@ -1,0 +1,311 @@
+
+```{r}
+churndat <- read.csv(url("https://statmath.wu.ac.at/~malsiner/datasets/churn.csv"))
+```
+
+```{r}
+head(churndat)
+```
+</br>
+<h3>Data types in list</h3>
+
+```{r}
+str(churndat)
+```
+churn is a categorical variable: Yes / No</br>
+internationalplan is a categorical variable: Yes / No</br>
+Voicemailplan is a categorical variable: Yes / No</br>
+Every other variable is either numeric or integer</br>
+```{r}
+sapply(churndat, class)
+```
+```{r}
+summary(churndat)
+```
+```{r}
+churndat$churn <- factor(churndat$churn)
+```
+
+<h4>Churn ~ Accountlength</h4>
+```{r}
+plot(churn ~ accountlength, data=churndat)
+```
+</br>
+There seems to be no difference in churn-behavior for the different accountlengths
+</br>
+<h4>Churn ~ numbervmailmessages</h4>
+```{r}
+plot(churn ~ numbervmailmessages , data=churndat)
+```
+</br>
+The higher the number of voice mail messages the more likely it is that the customer will not churn
+</br>
+<h4>Churn ~ totaldayminutes</h4>
+```{r}
+plot(churn ~ totaldayminutes , data=churndat)
+```
+</br>
+A customer is more likely to leave the company, when he spends more time talking over the phone
+</br>
+<h4>Churn ~ totaldaycalls</h4>
+```{r}
+plot(churn ~ totaldaycalls , data=churndat)
+```
+</br>
+There seems to be no difference between the different number of calls per day
+</br>
+<h4>Churn ~ totaldaycharge</h4>
+```{r}
+plot(churn ~ totaldaycharge , data=churndat)
+```
+</br>
+The customers were more likely to leave the company, when they were charged more
+</br>
+<h4>Churn ~ totaleveminutes</h4>
+```{r}
+plot(churn ~ totaleveminutes , data=churndat)
+```
+</br>
+There seems to be no strong difference of the churn-behavior for the different calling minutes
+</br>
+<h4>Churn ~ totalevechalles</h4>
+```{r}
+plot(churn ~ totalevecalls , data=churndat)
+```
+</br>
+There seems to be no difference in churn-behavior for the different numbers of total evening calls 
+</br>
+<h4>Churn ~ totalevecharge</h4>
+```{r}
+plot(churn ~ totalevecharge , data=churndat)
+```
+</br>
+There is a small difference in churn-behavior for the different charging-rates </br>
+- The higher the charge the more likely customers are to churn
+</br>
+<h4>Churn ~ totalnightminutes</h4>
+```{r}
+plot(churn ~ totalnightminutes , data=churndat)
+```
+</br>
+There is a small difference in churn-behavior for the different total numbers of calling-minutes </br>
+- The higher the number of minutes the more likely customers are to churn
+</br>
+<h4>Churn ~ totalnightcalls</h4>
+```{r}
+plot(churn ~ totalnightcalls , data=churndat)
+```
+</br>
+There seems to be no difference in churn-behavior compared to the total number of calls per night
+</br>
+<h4>Churn ~ totalnightcharge</h4>
+```{r}
+plot(churn ~ totalnightcharge , data=churndat)
+```
+</br>
+There seems to be a small difference in churn-behavior compared to the total charge for night calls
+</br>
+<h4>Churn ~ totalintlminutes</h4>
+```{r}
+plot(churn ~ totalintlminutes , data=churndat)
+```
+</br>
+The customer is more likely to churn, the higher the number of international minutes
+</br>
+<h4>Churn ~ totalintlcalls</h4>
+```{r}
+plot(churn ~ totalintlcalls , data=churndat)
+```
+</br>
+There seems to be a small difference between the churn-behavior and the total number of international calls
+</br>
+<h4>Churn ~ totalintlcharge</h4>
+```{r}
+plot(churn ~ totalintlcharge , data=churndat)
+```
+</br>
+There seems to be no difference in churn-behavior for the different charging-rates for international calls
+</br>
+<h4>Churn ~ numbercostomerservicecalls</h4>
+```{r}
+plot(churn ~ numbercustomerservicecalls , data=churndat)
+```
+</br>
+The customers were more likely to leave the company, when they had a high number of complaints
+</br>
+<h2>**<span style="color:red">EXCERCISE 2</span>**</h2>
+</br>
+<h4>Training and testing</h4>
+80% training data - 20% test data
+
+```{r}
+#task 2
+n<-nrow(churndat)
+n1<-floor(n*0.8)# number of obs in train set
+set.seed(2004)## for reproducibility
+id_train<-sample(1:n, n1)
+train_dat<-churndat[id_train, ]
+test_dat<-churndat[-id_train, ]
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 3</span>**</h2>
+<h4>Multiple logistic regression</h4>
+```{r}
+#task 3
+#multiple logistic regression
+mlr <- glm(churn ~ ., data=train_dat, family =binomial())
+summary (mlr)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 4</span>**</h2>
+
+```{r}
+#task 4
+#AIC stepwise
+fit_one_intercept <- glm(churn ~ 1, data = train_dat, family = binomial())
+fit_forward <- step(fit_one_intercept, direction = "forward", scope = formula(mlr))
+summary(fit_forward)
+
+```
+According to the "Forward Selction" only few veriables are important:
+- internationalplanyes
+- numbercustomerservicecalls
+- totaldayminutes
+- voicemailplanyes
+- totalevecharge
+- totalintlcharge
+- totalintelcalls
+- totalnightcharge
+- numbervmailmessages
+- totaldaycharge
+
+</br>
+<h4>AIC comparison</h4>
+```{r}
+AIC(mlr, fit_forward)
+```
+Model selected by Forward Selection has a lower AIC than the model with all variables
+</br>
+<h2>**<span style="color:red">EXCERCISE 5</span>**</h2>
+</br>
+<h4>k-NN Model with 5 fold cross-validation</h4>
+```{r}
+#downloading package for task 5
+if(!require("caret")) install.packages("caret"); library("caret")
+```
+```{r}
+#task 5
+set.seed(1234)
+ctrl <- trainControl(method = "cv", num= 5)
+
+model.logit_forward <- train(
+  churn~ .,
+  data= train_dat,
+  method= "glm",
+  trControl= ctrl,)
+
+model.knn <- train(
+  churn ~.,
+  data= train_dat,
+  method= "knn",
+  trControl= ctrl,
+  tuneGrid = data.frame(k = c(3,5,7,9)))
+
+knn_scaled<-train(
+  churn ~.,
+  data= train_dat,
+  method= "knn",
+  trControl= ctrl,
+  tuneGrid = data.frame(k = c(3,5,7,9)),
+  preProcess= c("center", "scale"))
+
+model.logit_forward
+model.knn
+
+knn_scaled
+
+```
+- For the k-NN Model k = 7 was selected
+- For the scaled K-NN Model k= 3 was selected
+
+</br>
+<h2>**<span style="color:red">EXCERCISE 6</span>**</h2>
+</br>
+<h4>Naive Bayes Model</h4>
+```{r}
+#task 6
+model.nb <- train(
+  churn ~.,
+  data=train_dat,
+  method= "naive_bayes",
+  trControl=ctrl
+)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 7</span>**</h2>
+
+```{r}
+fit_logit_step_train <- glm(churn ~ numbercustomerservicecalls + totaldayminutes + totalevecharge + totalintlcharge + totalintlcalls + totalnightcharge + numbervmailmessages + totaldaycharge,data = train_dat, family = binomial())
+fit_knn <- knn3(churn ~., data = train_dat)
+fit_nb <- e1071::naiveBayes(churn~., data = train_dat)
+
+p1 <- predict(fit_forward,newdata = test_dat,type = "response")
+yhat.glm <- (p1 > 0.5) + 0
+yhat.knn <- predict(fit_knn, newdata = test_dat,type = "class")
+yhat.nb <- predict(fit_nb, newdata = test_dat)
+
+tab.glm <- table(predicted = yhat.glm, observed = test_dat$churn)
+tab.knn <- table(predicted = yhat.knn, observed = test_dat$churn)
+tab.nb  <- table(predicted = yhat.nb, observed = test_dat$churn)
+```
+</br>
+<h4>Contingency tables</h4>
+```{r}
+tab.glm
+```
+```{r}
+tab.knn
+```
+```{r}
+tab.nb
+```
+</br>
+<h4>Accuracy, Recall, Precision</h4>
+```{r}
+acc <- c(glm = sum(diag(tab.glm))/sum(tab.glm),## accuracy
+         knn = sum(diag(tab.knn))/sum(tab.knn),
+         nb = sum(diag(tab.nb))/sum(tab.nb))
+acc
+```
+```{r}
+rec <- c(glm = tab.glm[2,2]/(tab.glm[1,2] + tab.glm[2,2]),
+         knn = tab.knn[2,2]/(tab.knn[1,2] + tab.knn[2,2]),
+         nb = tab.nb[2,2]/(tab.nb[1,2] + tab.nb[2,2]))
+rec
+```
+```{r}
+prec <- c(glm = tab.glm[2,2]/(tab.glm[2,1] + tab.glm[2,2]),
+          knn = tab.knn[2,2]/(tab.knn[2,1] + tab.knn[2,2]),
+          nb = tab.nb[2,2]/(tab.nb[2,1] + tab.nb[2,2]))
+prec
+```
+- The k-NN achieves the highest accuracy and precision - yet a rather low recall (only about 34 percent of all positiv cases were correctly predicted)</br>
+- The naive Bayes has the highest recall</br>
+- Accuracy was high in all the models</br>
+</br>
+<h4>Confusion matrix</h4>
+
+```{r}
+#task 7
+
+confusionMatrix(predict(model.logit_forward, test_dat), test_dat$churn)
+confusionMatrix(predict(model.knn, test_dat), test_dat$churn)
+confusionMatrix(predict(knn_scaled, test_dat), test_dat$churn)
+confusionMatrix(predict(model.nb, test_dat), test_dat$churn)
+
+```
+</br>
+- In all four models a high count of "true positivs" is achieved</br>
+- yet the number of "false positives" is the second highest across all models 
+
+

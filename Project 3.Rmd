@@ -1,0 +1,179 @@
+
+```{r}
+churndat <- read.csv(url("https://statmath.wu.ac.at/~malsiner/datasets/churn.csv"))
+```
+
+```{r}
+if(!require("rpart")) install.packages("rpart"); library("rpart")
+if(!require("rpart.plot")) install.packages("rpart.plot"); library("rpart.plot")
+```
+
+<h2>**<span style="color:red">EXCERCISE 1</span>**</h2>
+</br>
+<h4>Training and testing</h4>
+80% training data - 20% test data
+
+```{r}
+n<-nrow(churndat)
+n1<-floor(n*0.8)# number of obs in train set
+set.seed(2004)## for reproducibility
+id_train<-sample(1:n, n1)
+train_dat<-churndat[id_train, ]
+test_dat<-churndat[-id_train, ]
+```
+</br>
+
+```{r}
+summary(churndat)
+```
+```{r}
+train_dat$churncat <- factor(train_dat$churn)
+test_dat$churncat <- factor(test_dat$churn)
+```
+
+Creating a factor for churncat based on churn for the testing and training data
+
+<h2>**<span style="color:red">EXCERCISE 2</span>**</h2>
+</br>
+<h4>Classification tree with all variables</h4>
+```{r}
+ct <- rpart(churncat ~ . - churn, data = train_dat) #churn is already included in churncat
+```
+```{r}
+rpart.plot(ct, extra = 101)
+
+```
+</br>
+<h4>Testing R-Squared values for pruning</h4>
+
+```{r}
+ct_full <- rpart(churncat ~ . - churn, data = train_dat, control = list(cp = 0))
+```
+```{r}
+rsq.rpart(ct_full)
+```
+```{r}
+printcp(ct_full)
+```
+</br>
+For the best classification tree we should make 7 splits, which result in a CP-value of 0.0324324
+</br>
+
+```{r}
+ct_pruned <- prune(ct_full, cp = 0.0324324)
+rpart.plot(ct_pruned)
+```
+</br>
+The pruned classification tree has 8 splits (even if we took the CP for 7 splits
+</br>
+<h5>According to the pruned classification tree following variables matter:</h5></br>
+ - totaldayminutes</br>
+ - numbercustomerservicecalls</br>
+ - voicemailplan</br>
+ - internationalplan</br>
+ - totaldayminutes</br>
+ - totaleveminutes</br>
+ - totalintlminutes</br>
+ - totalintlcalls</br>
+
+</br>
+<h2>**<span style="color:red">EXCERCISE 3</span>**</h2>
+</br>
+
+```{r}
+if(!require("randomForest")) install.packages("randomForest"); library("randomForest")
+if(!require("corrplot")) install.packages("corrplot"); library("corrplot")
+```
+<h4>Random Forest</h4>
+```{r}
+crf <- randomForest(churncat ~ . - churn,data = train_dat,importance = TRUE, mtry = 4)
+crf
+```
+</br>
+Random forest with 500 trees and an mtry of 4 (=number of random selected variables for each tree)
+
+```{r}
+importance(crf)
+```
+```{r}
+varImpPlot(crf)
+```
+</br>
+<h5>According to the random forest the most important variables are (top 5 of Accuracy and Gini - the higher the better):</h5></br>
+ - numbercustomerservicecalls</br>
+ - internationalplan</br>
+ - totaldayminutes</br>
+ - totaldaycharge</br>
+ - totalintlcalls</br>
+ - totalevecharge</br>
+ - totaleveminutes</br>
+</br>
+<h2>**<span style="color:red">EXCERCISE 4</span>**</h2>
+</br>
+<h4>Forward Selection on training data</h4>
+
+```{r}
+mlr <- glm(churncat ~.-churn, data=train_dat, family =binomial())
+```
+
+
+
+```{r}
+fit_one_intercept <- glm(churncat ~ 1, data = train_dat, family = binomial())
+fit_forward <- step(fit_one_intercept, direction = "forward", scope = formula(mlr))
+summary(fit_forward)
+```
+</br>
+<h5>According to the model selected by forward selection these variables are important:</h5></br>
+ - internationalplanyes</br>        
+ - numbercustomerservicecalls</br>   
+ - totaldayminutes</br>            
+ - voicemailplanyes</br>         
+ - totalevecharge</br>               
+ - totalintlcharge</br>              
+ - totalintlcalls</br>              
+ - totalnightcharge</br>            
+ - numbervmailmessages</br>           
+ - totaldaycharge</br>
+</br>
+
+<h5>Comparing the different results from each model:</h5></br>
+ - All models more or less pick the same important variables</br>
+ - The model with forward selection chooses more variables than the classification tree</br>
+ - While the classification tree sees "voicemailplan" as an import variable, the random forest model ranks it as not so important</br>
+<h2>**<span style="color:red">EXCERCISE 5</span>**</h2>
+</br>
+
+
+```{r}
+if(!require("caret")) install.packages("caret")
+```
+```{r}
+fitControl <- trainControl(## 10-fold CV
+  method = "cv",number = 10)
+```
+
+
+
+```{r}
+fit_logical_regression <- train(churncat ~ totaldaycharge + internationalplan + 
+    numbercustomerservicecalls + numbervmailmessages + totaleveminutes + 
+    totalnightminutes + totalintlminutes, data = test_dat, method = "glm", trControl = fitControl)
+
+fit_random_forest <- train(churncat ~ .-churn, data = test_dat, method = "rf", tuneGrid = data.frame(mtry = 4), trControl = fitControl)
+
+fit_classification_tree <- train(churncat ~ . -churn, data = test_dat, method = "rpart", trControl = fitControl)
+
+fit_logical_regression
+```
+```{r}
+fit_random_forest
+```
+
+```{r}
+fit_classification_tree
+```
+</br>
+The random forest method has the highest accuracy with 0.933</br>
+The classification tree has an accuracy 0.895</br>
+The forward selected model has an accuracy of 0.861</br>

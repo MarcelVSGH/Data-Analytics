@@ -1,0 +1,185 @@
+
+
+```{r}
+if(!require("quantmod"))install.packages("quantmod");
+cbbPalette<-c("#000000","#E69F00","#56B4E9","#009E73","#F0E442","#0072B2","#D55E00","#CC79A7")
+if(!require("scatterplot3d"))install.packages("scatterplot3d");
+
+```
+```{r}
+load(url("http://statmath.wu.ac.at/~vana/datasets/RMFAnalysisClean.rda"))
+dataSc <- scale(RMFAnalysisClean)
+dat<- as.data.frame(dataSc)
+RMFAnalysisClean<-na.omit(RMFAnalysisClean)
+```
+
+</br>
+<h2>**<span style="color:navy">EXCERCISE 1</span>**</h4>
+<h3>Summary of data set</h3>
+
+```{r}
+head(RMFAnalysisClean)
+```
+</br>
+<h3>Visualisation of the Data</h3>
+<h4>Visualisation with the help of Pair-Plots</h4>
+
+```{r}
+dim(dat)
+sapply(dat, class)
+par(mfrow= c(1,3))
+plot(dat$Frequency, col="navy", xlab="number of observations")
+plot(dat$Recency, col="blue",  xlab="number of observations")
+plot(dat$Monetary.mean, col="lightblue",  xlab="number of observations")
+```
+</br>
+<h4>Visualisation with the help of 3D-Graphs</h4>
+
+```{r}
+plot(dat$Frequency ~ dat$Recency, col="navy")
+plot(dat$Frequency ~ dat$Monetary.mean, col="blue")
+plot(dat$Recency ~ dat$Monetary.mean, col="lightblue")
+par(mfrow= c(1,1))
+if(!require('plotly')) install.packages('plotly'); library('plotly')
+plot_ly(dat, x=~Frequency, y=~Recency, z=~Monetary.mean, color = 'steelblue', colors = "Paired")
+```
+
+
+</br>
+<h4>Visualisation with the help of PCA</h4>
+
+```{r}
+pca_RMF<- princomp(RMFAnalysisClean)
+pca_RMF
+```
+
+```{r}
+plot(pca_RMF, col="navy") 
+```
+
+</br>
+- Component 1 has the largest variance</br>
+</br>
+
+```{r}
+var_RMF<-sum(apply(RMFAnalysisClean,2, var))
+prop.var.explain<-pca_RMF$sdev^2/var_RMF
+barplot(prop.var.explain,xlab ="Principal Component",ylab ="PVE", col="navy")
+```
+</br>
+- Component 1 has the largest variance</br>
+</br>
+
+```{r}
+pca_RMF
+```
+</br>
+- Component 1 has the largest variance</br>
+
+```{r}
+pca_RMF$loadings[,1]
+# we only use 1 comp because it has more than 85% of the Variance structure of all comp, we can argue that we can take 2 comps for better comparison but comp 2 var is negligible
+```
+-Component 1 has more than 85% of the Variance-Structure of all Components, hencewhy we chose only Component one for the analysis</br>
+-It can be argued that 2 Components are a better choice for the analysis but Component 2 is negligible</br>
+
+</br>
+<h2>**<span style="color:navy">EXCERCISE 2</span>**</h4>
+<h3>Clustering</h3>
+```{r}
+if(!require("dbscan"))install.packages("dbscan");library("dbscan")
+if(!require("fpc"))install.packages("fpc");library("fpc")
+if(!require("cluster"))install.packages("cluster");library("cluster")
+```
+</br>
+<h3>Pair-Plots Overview</h3>
+</br>
+```{r}
+plot(dat, col="royalblue")
+```
+</br>
+<h3>Preparation for K-Means Clustering</h3>
+</br>
+```{r}
+#Elbow-method
+nstart = 5 
+K <- 2:30
+WSS <- sapply(K, function(x) {
+kmeans(dataSc, centers = x,
+nstart=nstart)$tot.withinss
+})
+warnings()
+WSS
+plot(K,  WSS, col = "navy")
+```
+</br>
+-The Elbow-Method is a way to find an accurate number of Clusters for the K-Means Clustering</br>
+-It is especially helpful when the dataset doesn't have a clear amount of individual Clusters</br>
+
+</br>
+<h3>K-Means Clustering</h3>
+</br>
+```{r}
+if(!require('plotly')) install.packages('plotly'); library('plotly')
+n_clus <- 7
+dat$cluster <- factor(kmeans(dat, n_clus)$cluster)
+plot_ly(dat, x=~Frequency, y=~Recency, z=~Monetary.mean, color=~dat$cluster, colors = "Paired") %>% 
+  add_markers(size= ~ 1, marker=list(sizeref=0.5))
+dat <- dat[,1:3]
+```
+</br>
+<h3>Hierarchical Clustering</h3>
+</br>
+
+```{r}
+#hc clustering
+d <- dist(dat)
+model.hc <- hclust(d)
+clusters2 <- cutree(model.hc, k= 3)
+plot(model.hc)
+rect.hclust(model.hc, k=3)
+plot_ly(dat, x=~Frequency, y=~Recency, z=~Monetary.mean, color =~clusters2, colors = "Paired") %>% 
+  add_markers(size= ~ 1, marker=list(sizeref=0.5))
+```
+
+</br>
+<h3>DBScan</h3>
+</br>
+
+```{r}
+kNNdistplot(dat, k=4)
+minPts <-  4
+eps <- 0.8
+sapply(dat, class)
+model.dbs <- dbscan::dbscan(dat,
+                            eps = eps, 
+                            minPts = minPts)
+plot_ly(dat, x=~Frequency, y=~Recency, z=~Monetary.mean, color =~model.dbs$cluster +1, colors = "Paired") %>% 
+  add_markers(size= ~ 1, marker=list(sizeref=0.5))
+dat <- dat[,1:3]
+```
+</br>
+-The Knee-Method is a way to find an accurate number of points sorted by distance</br>
+
+</br>
+<h2>**<span style="color:navy">EXCERCISE 3</span>**</h4>
+<h3>Final Suggestion On Best Clustering Method</h3>
+
+```{r}
+clusters2 <- cutree(model.hc, k=3)
+clust.centroid = function(i, dat, clusters2) {
+  ind = (clusters2 == i)
+  colMeans(dat[ind,])
+}
+sapply(unique(clusters2), clust.centroid, dat, clusters2)
+```
+</br>
+-After the Analysis of all three types of Clustering Methods we are going to provide the best Clustering Method for this specific dataset.</br>
+
+-K-Means:Generally K-Means is seen as one of the simplest way to Cluster an unlabeled dataset but the K-Means Method delivers too many clusters and the credibility of the dataset get's lost in the process. Therefore, the K-Means-Method isn't going to be the winning Method.</br>
+
+-DBScan: The DBScan delivers only one big cluster henceforth you again loose the overview. The result is not deductible. Therefore, the DBScan isn't going to be the winning Method.</br>
+
+-Hierarchical CLustering: Last but definitely not least we have the Hierarchical Clustering which in this case will be our winner because it delivers an answer that can most accurately be interpreted.</br>
+
+

@@ -1,0 +1,173 @@
+
+```{r}
+if (!require("ISLR")) install.packages("ISLR"); library("ISLR")
+```
+```{r}
+data("College")
+?College
+```
+
+```{r}
+summary(College)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 1</span>**</h4>
+<h3>Data types in list</h3>
+
+```{r}
+sapply(College, class)
+```
+Private is a categorical variable, every other one is numeric
+
+
+</br>
+<h3>Relationsship between Variables</h3>
+</br>
+<h4>Between Apps and Private</h4>
+```{r}
+plot(Apps~Private, data = College)
+```
+```{r}
+summary(lm(Apps~Private, data = College))
+```
+</br>
+
+<h4>Between Apps and Accept</h4>
+```{r}
+plot(Apps~Accept, data = College)
+```
+```{r}
+summary(lm(Apps~Accept, data = College))
+```
+
+</br>
+<h4>Between Apps and PhD</h4>
+```{r}
+plot(Apps~PhD, data = College)
+```
+```{r}
+summary(lm(Apps~PhD, data = College))
+```
+</br>
+
+<h4>Between Apps and S.F.Ratio</h4>
+```{r}
+plot(Apps~S.F.Ratio, data = College)
+```
+```{r}
+summary(lm(Apps~S.F.Ratio, data = College))
+```
+
+
+
+```{r}
+FitPrivate <- lm(Apps~Private, data = College)
+FitAccept <- lm(Apps~Accept, data = College)
+FitPhD <- lm(Apps~PhD, data = College)
+FitSFRatio <- lm(Apps~ S.F.Ratio, data= College)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 2</span>**</h4>
+<h3>Linear Regression with all variables</h3>
+```{r}
+fitAll <- lm(Apps~., data = College)
+summary(fitAll)
+```
+F.Undergrad, P.Undergrad, Books, Personal, PhD, Terminal, S.F.Ratio, perc.alumni are not significant (p-value > 0.05)
+
+</br>
+<h2>**<span style="color:red">EXCERCISE 3</span>**</h4>
+<h3>P-Values</h3>
+```{r}
+cor.test(College$Apps, College$Accept)$p.value
+cor.test(College$Apps, College$Enroll)$p.value
+cor.test(College$Apps, College$Top10perc)$p.value
+cor.test(College$Apps, College$Top25perc)$p.value
+cor.test(College$Apps, College$F.Undergrad)$p.value
+cor.test(College$Apps, College$P.Undergrad)$p.value
+cor.test(College$Apps, College$Outstate)$p.value
+cor.test(College$Apps, College$Room.Board)$p.value
+cor.test(College$Apps, College$Books)$p.value
+cor.test(College$Apps, College$Personal)$p.value
+cor.test(College$Apps, College$PhD)$p.value
+cor.test(College$Apps, College$Terminal)$p.value
+cor.test(College$Apps, College$S.F.Ratio)$p.value
+cor.test(College$Apps, College$perc.alumni)$p.value
+cor.test(College$Apps, College$Grad.Rate)$p.value
+```
+</br>
+<h3>Linear Regression with chosen variables</h3>
+
+-variables that are related to higher cost: Private, Room</br>
+-chance of getting accepted and number of students who enroll: Accept, Enroll</br>
+-percentage of students who got good grades in high school (more likely to go to an university: Top10perc, Top25perc</br>
+
+```{r}
+FitSelected <- lm(Apps~Private+Accept+Top10perc + Top25perc+Enroll+Room.Board+Grad.Rate, data = College)
+summary(FitSelected)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 4 & 5</span>**</h4>
+<h3>Forward Variable Selections</h3>
+```{r}
+##step(fitAll, direction = "forward")
+fit_one_intercept <- lm(Apps~1, data = College)
+fit_forward <- step(fit_one_intercept, direction = "forward", scope = formula(fitAll))
+```
+```{r}
+summary(fit_forward)
+```
+The best model selected by the "Forward Variable Selection" is the model that includes: Private, Accept,</br> 
+Enroll, Top10perc, Top25perc, F.Undergrad,P.Undergrad, Outstate, Room.Board, PhD, Grad.Rate</br>
+&nbsp;&nbsp;&nbsp;Residual Standard Error: `r toString(summary(fit_forward)$sigma)` -> better fit: smaller then with all variables</br>
+&nbsp;&nbsp;&nbsp;F-Statistik: `r toString(summary(fit_forward)$f[1])` </br>
+&nbsp;&nbsp;&nbsp;Adjusted R-Sqaured: `r toString(summary(fit_forward)$adj.r.squared)` -> better fit: higher then with all variables</br>
+&nbsp;&nbsp;&nbsp;p-value: `r toString(summary(fit_forward)$coefficients[4] )` -> good fit</br>
+
+</br></br>
+
+<h4>Correlation-table</h4>
+```{r}
+cor(College[2:17])
+```
+</br>
+```{r}
+AIC(fitAll,FitSelected, fit_forward)
+```
+</br>
+<h2>**<span style="color:red">EXCERCISE 6</span>**</h4>
+<h3>Out of Sample excercise</h3>
+80% training data and 20% testing data
+
+```{r}
+n<-nrow(College)
+n1<-floor(n*0.8)# number of obs in train set
+set.seed(2004)## for reproducibility
+id_train<-sample(1:n, n1)
+train_dat<-College[id_train, ]
+test_dat<-College[-id_train, ]
+##train_dat<-College[1:n1,]
+##test_dat<-College[-(1:n1),]
+```
+```{r}
+FitSelectedTrain<-lm(Apps~Private+Accept+Top10perc + Top25perc+Enroll+Room.Board+Grad.Rate, data = train_dat)
+fitAllTrain<-lm(Apps~., data =train_dat)
+FitForwardTrain <- lm(Apps ~ Accept + Top10perc + Expend + Outstate + Enroll + Room.Board + Top25perc + Private + PhD + Grad.Rate + F.Undergrad ++ P.Undergrad, data = train_dat)
+```
+</br>
+<h4> Prediction errors and RMSE</h4>
+
+```{r}
+pred_Selceted<-predict(FitSelectedTrain,newdata =test_dat)
+pred_All<-predict(fitAllTrain,newdata =test_dat)
+pred_forward <- predict(FitForwardTrain, newdata = test_dat)
+
+erg <-sqrt(c(mean((pred_Selceted-test_dat$Apps)^2), mean((pred_All-test_dat$Apps)^2), mean((pred_forward-test_dat$Apps)^2)))
+erg
+```
+Lowest RMSE was achieved by the model selected by the "Forward Selection"</br>
+&nbsp; Model from Forward Selection (Fit_forward): `r toString(erg[3])` </br>
+&nbsp; Model with all variables (FitAll): `r toString(erg[2])`</br>
+&nbsp; Model with selected variables (FitSelected): `r toString(erg[1])`</br>
+
+
